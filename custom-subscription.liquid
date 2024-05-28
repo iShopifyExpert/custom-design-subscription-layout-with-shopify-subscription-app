@@ -1,0 +1,192 @@
+{{ 'custom-subscription.css' | asset_url | stylesheet_tag }}
+{% assign totalservings = product.variants[0].metafields.custom.variant_number_of_meals %}
+
+{% for option in product.options_with_values %}
+{%- assign parentloop = option.name | handle -%}
+<fieldset>
+    <legend class="radio__legend lgnd">
+        <span class="radio__legend__label radio__legend__label--text flex">
+            <span class="radio__legend__option-name nme">{{ option.name | upcase }}</span>
+            <span><small class="radio__legend__value no-label"># of Bags</small></span>
+        </span>
+    </legend>
+    <div class="radio__fieldset fset">
+        <div class="radio__buttons btns">
+            <div class="radio__button btn">
+              {% for value in option.values %}
+              {%- assign value_id = product.variants[forloop.index0].id -%}
+              {%- assign value_image = product.variants[forloop.index0].featured_image -%}
+              {%- assign value_number_of_bags = product.variants[forloop.index0].metafields.custom.variant_number_of_bags -%}
+              {%- assign value_price = product.variants[forloop.index0].price -%}
+              {%- assign value_compare_at_price = product.variants[forloop.index0].compare_at_price -%}
+              <div class="varient-box{% if forloop.first or value_id == product.selected_or_first_available_variant.id %} selected{% endif %}" data-name="{{ value | escape }}" data-price="{{ variant.price | money }}">
+                 <input type="radio" class="varient-id-input" name="{{ option.name }}" value="{{ value | escape }}" data-quantity="0" id="varient-id-input-{{value_id }}-{{ parentloop }}-{{ forloop.index0 }}"{% if value_id == product.selected_or_first_available_variant.id %} checked{% endif %} data-compareprice="{% if value_compare_at_price > value_price %}{{ value_compare_at_price | minus: value_price | times: 100.0 | divided_by: value_compare_at_price | round | append: '%' }}{% endif %}">
+                 <label class="radio__label varient__label lbl" for="varient-id-input-{{ value_id }}-{{ parentloop }}-{{ forloop.index0 }}">
+                    <div class="radio__item itm">
+                        <img src="{{ value_image | image_url: 'large' }}" class="radio__img img">
+                        <div class="radio__item-info info">
+                            <div class="radio__item-heading head">{{ value | escape }}</div>
+                            <div class="radio__item-details dets" data-bag="{{ value_number_of_bags }}">{{ value_number_of_bags }} servings / bag</div>
+                        </div>
+                    </div>
+                    <div class="radio__button-group grp">
+                      {%- for i in (0..3) -%}
+                        <div class="quantity-box">
+                        <input type="radio" name="{{ parentloop }}-{{ value_id }}-qunatity" value="{{ i }}" id="{{ value_id }}-{{ parentloop }}-{{ i }}-radio-quantity"{% if forloop.first %} checked{% endif %}>
+                        <label for="{{ value_id }}-{{ parentloop }}-{{ i }}-radio-quantity" class="radio__button-style bstyle">{{ i }}</label>
+                        </div>
+                     {%- endfor -%}
+                    </div>
+                  </label>
+                </div>
+               {%- endfor -%}
+            </div>
+        </div>
+    </div>
+</fieldset>
+{% endfor %}
+<div class="subscription-section">
+    <p class="intro-title">DELIVERY FREQUENCY</p>
+    <!-- Subscribe & Save Option -->
+  {% for selling_plan_group in product.selling_plan_groups %}
+    {%- if forloop.index0 == 0 -%}
+    <div class="subscription-option" id="subscribe-option">
+        <input type="radio" id="subscribe" name="purchase-type" value="selling_plan" class="subscription-radio"{% if selling_plan_group.selling_plan_selected %} checked{% endif %}>
+        <label for="subscribe" class="subscription-label">
+            <div class="radio-fake"></div>
+            <div class="details">
+                <div class="title-and-popular">
+                    <span class="option-title">SUBSCRIBE & SAVE</span>
+                    <span class="most-popular">MOST POPULAR</span>
+                </div>
+                <div class="price-line">
+                    <div class="prices">
+                        <span class="original-price">{{ product.price | money }}</span>
+                        <span class="discounted-price">{{ selling_plan_group.selling_plans[0].price_adjustments[0].value | minus: product.price | abs | money | append: ' / BAG' }}</span>
+                    </div>
+                    
+                    <span class="serving-price">{% if totalservings > 0 %}ONLY {{ selling_plan_group.selling_plans[0].price_adjustments[0].value | minus: product.price | abs | divided_by: totalservings | money }} / SERVING{% else %}Select Quantity{% endif %}</span>
+                </div>
+            </div>
+            <hr class="price-separator">
+            <div class="additional-info">
+                <div class="delivery-option">
+                    <span class="delivery-text">Delivery Every:</span>
+                    <div class="select-container{% if selling_plan_group.selling_plan_selected %} selected{% endif %}">
+                        <select class="delivery-select selected" aria-label="Select delivery schedule">
+                          {% for selling_plan in selling_plan_group.selling_plans %}
+                            <option value="{{ selling_plan.id }}" data-discountedprice="{{ selling_plan.price_adjustments[0].value | minus: product.price | abs | money | append: ' / BAG' }}" data-originalprice="{{ product.price | money }}" data-percentage='{{ selling_plan.name | split: ', ' | last | remove: ' off' | remove: '.00' }}' data-percentagenum='{{ selling_plan.name | split: ', ' | last | remove: ' off' | remove: '.00' | remove: '$' }}' {% if selling_plan.selected %} selected{% endif %}>{% assign change_currency = cart.currency.symbol %}{{ selling_plan.name | replace: 'Delivery every ', '' | split: ',' | first }}</option>
+                          {% endfor %}
+                        </select>
+                    </div>
+                </div>
+                <ul class="benefits-list">
+                    <li>Save {{ selling_plan_group.selling_plans[0].name | split: ', ' | last | remove: ' off' | remove: '.00' | append: ' Per Bag' }}</li>
+                </ul>
+                <p class="see-more-link">On average, 2 bags last 4 weeks</p>
+            </div>
+        </label>
+    </div>
+    {% break %}
+    {% endif %}
+  {% endfor %}
+  {% unless product.requires_selling_plan %}
+    <!-- One-Time Purchase Option -->
+    <div class="subscription-option{% unless product.selected_selling_plan %} selected{% endunless %}" id="one-time-option">
+        <input type="radio" id="one-time" name="purchase-type" value="one_time_purchase" class="subscription-radio" {% unless product.selected_selling_plan %}checked{% endunless %}>
+        <label for="one-time" class="subscription-label">
+            <div class="radio-fake"></div>
+            <div class="details">
+                <span class="option-title">{{ 'products.product.one_time_purchase' | t }}</span>
+                <div class="price-line">
+                    <span class="full-price">{{ product.price | money | append: ' / BAG' }}</span>
+                    <span class="serving-price">{% if totalservings > 0 %}ONLY {{ selling_plan_group.selling_plans[0].price_adjustments[0].value | minus: product.price | abs | divided_by: totalservings | money }} / SERVING{% else %}Select Quantity{% endif %}</span>
+                </div>
+            </div>
+        </label>
+    </div>
+   {% endunless %}
+       
+</div>
+<div class="savings-box">
+    <p class="savings-notice total">Total Savings: <span class="savings-b">$0</span></p>
+    <ul class="benefits-list savings">
+        <li class="subscription-discount">Subscription Discount: <span class="savings-b">{{ product.selling_plan_groups[0].selling_plans[0].name | split: ', ' | last | remove: ' off' | remove: '.00' }}</span></li>
+        <li class="multipack-discount">Multipack Discount: <span class="savings-b">$0</span></li>
+        <li class="free-shipping">Free Shipping: <span class="savings-b">Add $41.99 for free shipping</span></li>
+    </ul>
+</div>
+<style>#shopify-block-subscriptions_app_block_fDYfKX {display:none;}</style>
+<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+<script>
+$(document).ready(function() {
+  $(document).on('change', '.varient-box .varient-id-input', function() {
+    $('.varient-box').removeClass('selected');
+    $(this).parents('.varient-box').addClass('selected');
+    var selectedvarient = $(this).val();
+    var selectedquantity = $(this).parents('.varient-box').find('.radio__button-group .quantity-box input[type="radio"]:checked').val();
+    $('.selector-wrapper fieldset .radio__button input[data-single-option-selector][type="radio"][value="'+selectedvarient+'"]').next('label').trigger('click').click();
+    var checkedoption = $('.subscription-section input[type="radio"][name="purchase-type"]:checked').val();
+    if (checkedoption == 'selling_plan') {
+      var percentage = $('.delivery-select').find('option:selected').data('percentage');
+      var percentagenum = $('.delivery-select').find('option:selected').data('percentagenum');
+      $('.savings-notice.total span').text('$'+percentagenum*selectedquantity);
+      $('.subscription-discount span').text(percentage);
+      $('.multipack-discount span').text('$15');
+    }
+  });
+  $(document).on('change', '.varient-box .radio__button-group .quantity-box input[type="radio"]', function() {
+    var selectedquantity = $(this).val();
+    $('.varient-box').removeClass('selected');
+    $(this).parents('.varient-box').addClass('selected').find('label.varient__label').trigger('click').click();
+    $(this).parents('.varient-box').find('.varient-id-input').attr('data-quantity', selectedquantity);
+    var checkedoption = $('.subscription-section input[type="radio"][name="purchase-type"]:checked').val();
+    if (checkedoption == 'selling_plan') {
+      var percentage = $('.delivery-select').find('option:selected').data('percentage');
+      var percentagenum = $('.delivery-select').find('option:selected').data('percentagenum');
+      $('.savings-notice.total span').text('$'+percentagenum*selectedquantity);
+      $('.subscription-discount span').text(percentage);
+      $('.multipack-discount span').text('$15');
+    }
+  });
+  $(document).on('change', '.subscription-section input[type="radio"][name="purchase-type"]', function() {
+    var checkedoption = $(this).val();
+    $('.subscription-section .subscription-option').removeClass('selected');
+    $(this).parents('.subscription-option').addClass('selected');
+    if (checkedoption == 'one_time_purchase') {
+      $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedoption+'"]').parents('label').trigger('click');
+      $('.savings-notice.total span').text('$0');
+      $('.subscription-discount span').text('$0');
+      $('.multipack-discount span').text('$0');
+    } else if (checkedoption == 'selling_plan') {
+      var deliveryselected = $('.delivery-select').val();
+      $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedoption+'"][data-selling-plan-id="'+deliveryselected+'"]').parents('label').trigger('click');
+      var selectedquantity = $('.varient-box.selected .radio__button-group .quantity-box input[type="radio"]:checked').val();
+      var percentage = $('.delivery-select').find('option:selected').data('percentage');
+      var percentagenum = $('.delivery-select').find('option:selected').data('percentagenum');
+      $('.savings-notice.total span').text('$'+percentagenum*selectedquantity);
+      $('.subscription-discount span').text(percentage);
+      $('.multipack-discount span').text('$15');
+    }
+  });
+  $(document).on('change', '.delivery-select', function() {
+    var deliveryselected = $(this).val();
+    $('.subscription-section input[type="radio"][name="purchase-type"][value="selling_plan"]').trigger('click');
+    var checkedoption = $('.subscription-section input[type="radio"][name="purchase-type"]:checked').val();
+    $('.subscription-section .subscription-option').removeClass('selected');
+    $(this).parents('.subscription-option').addClass('selected');
+    $('.shopify_subscriptions_app_block_label input[data-radio-type="'+checkedoption+'"][data-selling-plan-id="'+deliveryselected+'"]').parents('label').trigger('click');
+    var discounted_price = $(this).find('option:selected').data('discountedprice');
+    var original_price = $(this).find('option:selected').data('originalprice');
+    var selectedquantity = $('.varient-box.selected .radio__button-group .quantity-box input[type="radio"]:checked').val();
+    var percentage = $(this).find('option:selected').data('percentage');
+    var percentagenum = $(this).find('option:selected').data('percentagenum');
+    $(this).parents('.subscription-option').find('.original-price').text(original_price);
+    $(this).parents('.subscription-option').find('.discounted-price').text(discounted_price);
+    $(this).parents('.subscription-option').find('.benefits-list li').text('Save '+percentage+' Per Bag');
+    $('.savings-notice.total span').text('$'+percentagenum*selectedquantity);
+    $('.subscription-discount span').text(percentage);
+    $('.multipack-discount span').text('$15');
+  });
+});
+</script>
